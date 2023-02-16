@@ -5,7 +5,7 @@
 	y = x;
 	x = 4;
 	y = 2;
-	do {
+	while (x >y) {
 		x = y;
-	} while(x != y);
+	}
 }

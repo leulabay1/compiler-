@@ -22,7 +22,7 @@ public class Assembly {
         System.out.println(s);
     }
     
-    public void program() {
+    public String program() {
         OUTER:
         for( move();; move() ) {
             switch( look.tag ) {
@@ -35,16 +35,14 @@ public class Assembly {
                     assign(look);
                     break;
                 case Tag.IFFALSE:
-                    Register address = equality();
-                    move();
                     Token label = look;
-                    lesserThanZero(address, label);
+                    Register address = equality();
+                    copylabel(look);
                     break;
                 case Tag.IF:
+                    label = look;
                     address = equality();
                     move();
-                    label = look;
-                    greaterThanZero(address, label);
                     break;
                 case Tag.GOTO:
                     move();
@@ -53,6 +51,7 @@ public class Assembly {
             }
         }
         exitstatement();
+        return assembStr;
     }
     
     private void exitstatement() {
@@ -174,24 +173,25 @@ public class Assembly {
         Register address;
         move();
         address = rel();
-        if( look.tag == Tag.EQ ) {
-            move();
-            Register temp = rel();
-            address = subt(address, temp);
-            address = andimmediate(address, new Num(2147483647));
-            temp = loadimmediate(new Num(1));
-            address = subt(temp, address);
-        }
-        else if( look.tag == Tag.NE ) {
-            move();
-            Register temp = rel();
-            address = subt(address, temp);
-            address = andimmediate(address, new Num(2147483647));
-            temp = loadimmediate(new Num(1));
-            address = subt(temp, address);
-            Register neg = loadimmediate(new Num(-1));
-            address = mult(address, neg);
-        }
+        move();
+//        if( look.tag == Tag.EQ ) {
+//            move();
+//            Register temp = rel();
+////            address = subt(address, temp);
+////            address = andimmediate(address, new Num(2147483647));
+////            temp = loadimmediate(new Num(1));
+////            address = subt(temp, address);
+//        }
+//        else if( look.tag == Tag.NE ) {
+//            move();
+//            Register temp = rel();
+////            address = subt(address, temp);
+////            address = andimmediate(address, new Num(2147483647));
+////            temp = loadimmediate(new Num(1));
+////            address = subt(temp, address);
+////            Register neg = loadimmediate(new Num(-1));
+////            address = mult(address, neg);
+//        }
         return address;
     }
     
@@ -205,33 +205,61 @@ public class Assembly {
         move();
         if( look.tag == '>' ) {
             move();
-            Register temp = rel();
-            address = subt(address, temp);
-            address = addimmediate(address, new Num(-1));
-            address = orimmediate(address, new Num(1));
-            address = andimmediate(address, new Num(-2147483647));
+            if(look.tag == Tag.NUM || look.tag == Tag.REAL) {
+                address = loadimmediate((Num)look);
+            }
+            else
+                address = loadword((Word)look);
+            Token lable1 = look;
+            lesserThanEqual(address,lable1);
+            
+//            lesserThanEqual(address, lable1);
+//            address = subt(address, temp);
+//            address = addimmediate(address, new Num(-1));
+//            address = orimmediate(address, new Num(1));
+//            address = andimmediate(address, new Num(-2147483647));
         }
         else if( look.tag == Tag.GE ) {
             move();
-            Register temp = rel();
-            address = subt(address, temp);
-            address = orimmediate(address, new Num(1));
-            address = andimmediate(address, new Num(-2147483647));
+            if(look.tag == Tag.NUM || look.tag == Tag.REAL) {
+                address = loadimmediate((Num)look);
+            }
+            else
+                address = loadword((Word)look);
+            Token lable1 = look;
+            lesserThan(address, lable1);
+
+
+//            address = subt(address, temp);
+//            address = orimmediate(address, new Num(1));
+//            address = andimmediate(address, new Num(-2147483647));
         }
         else if( look.tag == '<' ) {
             move();
-            Register temp = rel();
-            address = subt(temp, address);
-            address = addimmediate(address, new Num(-1));
-            address = orimmediate(address, new Num(1));
-            address = andimmediate(address, new Num(-2147483647));
+            if(look.tag == Tag.NUM || look.tag == Tag.REAL) {
+                address = loadimmediate((Num)look);
+            }
+            else
+                address = loadword((Word)look);
+            Token lable1 = look;
+            greaterThanEqual(address, lable1);
+//            address = subt(temp, address);
+//            address = addimmediate(address, new Num(-1));
+//            address = orimmediate(address, new Num(1));
+//            address = andimmediate(address, new Num(-2147483647));
         }
         else if( look.tag == Tag.LE ) {
             move();
-            Register temp = rel();
-            address = subt(temp, address);
-            address = orimmediate(address, new Num(1));
-            address = andimmediate(address, new Num(-2147483647));
+            if(look.tag == Tag.NUM || look.tag == Tag.REAL) {
+                address = loadimmediate((Num)look);
+            }
+            else
+                address = loadword((Word)look);
+            Token lable1 = look;
+            greaterThan(address, lable1);
+//            address = subt(temp, address);
+//            address = orimmediate(address, new Num(1));
+//            address = andimmediate(address, new Num(-2147483647));
         }
         return address;
     }
@@ -276,8 +304,8 @@ public class Assembly {
         }
         else
             address = new Float(word, type, usedfloatreg++);
-        emit("\t" + "lw" + "\t" + address.getAddress() + ",\t" + "(" +
-                address.toString() + ")");
+        emit("\t" + "lw" + "\t" + address.getAddress() + ",\t" +
+                address.toString());
         return address;
     }
     
@@ -496,24 +524,57 @@ public class Assembly {
     }
     
     private void lesserThanZero(Register address, Token label) {
-        emit("\t" + "bltz" + "\t" + address.getAddress() + ",\t" +
-                label.toString());
+        move();
+        move();
+        Token lable = look;
+        emit("\t" + "bltz" + "\t" + address.getAddress() + ",\t" + lable.toString());
         resetAddresses();
     }
+    private void lesserThan(Register address, Token label) {
+        move();
+        move();
+        Token lable = look;
+        emit("\t" + "blt" + "\t" + "$t0" + "\t" + "$t1"+ ",\t" + lable.toString());
+        resetAddresses();
+    }
+    private void lesserThanEqual(Register address, Token label) {
+        move();
+        move();
+        Token lable = look;
+        emit("\t" + "ble" + "\t" + "$t0" + "\t" + "$t1"+ ",\t" + lable.toString());
+        resetAddresses();
+    }
+    
     
     private void greaterThanZero(Register address, Token label) {
-        emit("\t" + "bgtz" + "\t" + address.getAddress() + ",\t" +
-                label.toString());
+        move();
+        move();
+        Token lable = look;
+        emit("\t" + "bgtz" + "\t" + address.getAddress() + ",\t" +lable.toString());
         resetAddresses();
     }
     
+    private void greaterThan(Register address, Token label) {
+        move();
+        move();
+        Token lable = look;
+        emit("\t" + "bgt" + "\t" + "$t0" + "\t" + "$t1"+ ",\t" + lable.toString());
+        resetAddresses();
+    }
+    private void greaterThanEqual(Register address, Token label) {
+        move();
+        move();
+        Token lable = look;
+        emit("\t" + "bge" + "\t" + "$t0" + "\t" + "$t1"+ ",\t" + lable.toString());
+        resetAddresses();
+    }
     private void jump(Token label) {
         emit("\t" + "j" + "\t" + label.toString());
     }
     
     private void store(Token tok, Register address) {
-        emit("\t" + "move" + "\t" + tok.toString() + ",\t" + 
-                address.getAddress());
+        emit("\t" + "sw" + "\t" + address.getAddress() + ",\t" + 
+                tok.toString());
         resetAddresses();
     }
     
@@ -524,7 +585,7 @@ public class Assembly {
     }
     
     private void storearray(Token offset, Token index, Register address) {
-        emit("\t" + "move" + "\t" + offset.toString() + "(" +
-                index.toString() + "),\t" + address.getAddress());
+        emit("\t" + "sw" + "\t" + address.getAddress() + "(" +
+                index.toString() + "),\t" + offset.toString());
     }
 }

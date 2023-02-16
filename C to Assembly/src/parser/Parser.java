@@ -2,6 +2,7 @@ package parser;
 import java.io.*; import lexer.*; import symbols.*; import inter.*;
 import asm.*;
 import java.util.Hashtable;
+import javax.swing.JOptionPane;
 
 public class Parser {
 
@@ -20,7 +21,11 @@ public class Parser {
 
    void move() throws IOException { look = lex.scan(); }
 
-   void error(String s) { throw new Error("near line "+lex.line+": "+s); }
+   void error(String s) {
+       JOptionPane.showMessageDialog(null, "Syntax Erorr near line"+lex.line, "Erorr", 2);
+       throw new Error("near line "+lex.line+": "+s); 
+               
+   }
 
    void match(int t) throws IOException {
       if( look.tag == t ) move();
